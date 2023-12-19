@@ -1,0 +1,54 @@
+services:
+  nestjs-test-api:
+    container_name: nestjs-test-api
+    image: nestjs-test-api
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - ${PORT}:${PORT}
+    networks:
+      - nestjs-test-intranet
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=nestjs-test-mysql
+    depends_on:
+      nestjs-test-mysql:
+        condition: service_healthy
+
+  nestjs-test-mysql:
+    container_name: nestjs-test-mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    volumes:
+      - mysql:/var/lib/mysql
+    ports:
+      - 3307:${DB_PORT}
+    networks:
+      - nestjs-test-intranet
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: 'utc'
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ['CMD', 'mysqladmin', '-u${DB_USER}', '-p${DB_PASSWORD}', 'ping']
+      interval: 5s
+      retries: 3
+      timeout: 3s
+
+volumes:
+  mysql:
+    name: nestjs-test-mysql
+
+networks:
+  nestjs-test-intranet:
+    name: nestjs-test-intranet
+    driver: bridge
